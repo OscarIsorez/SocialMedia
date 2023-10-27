@@ -1,0 +1,72 @@
+<LoginScreen>:
+    name: "login"
+
+    email: email
+    password: password
+    BoxLayout:
+        orientation: "vertical"
+        Label:
+            text: "Email"
+        TextInput:
+            id: email
+            multiline: False
+        Label:
+            text: "Password"
+        TextInput:
+            id: password
+            multiline: False
+        Button:
+            text: "Login"
+            on_press: root.manager.current = "main"
+        Button:
+            text: "Create Account"
+            on_press: root.manager.current = "signup"
+
+<MainScreen>:
+    MDBottomNavigation:
+        MDBottomNavigationItem:
+            name: "screen 1"
+            text: "Home"
+            icon: "home"
+            MDLabel:
+                text: "Home"
+                halign: "center"
+        MDBottomNavigationItem:
+            name: "screen 2"
+            text: "Profile"
+            icon: "account"
+            MDLabel:
+                text: "Profile"
+                halign: "center"
+        MDBottomNavigationItem:
+            name: "screen 3"
+            text: "Settings"
+            icon: "settings"
+            MDLabel:
+                text: "Settings"
+                halign: "center"
+
+<SignupScreen>:
+    name: "signup"
+
+    email: email
+    password: password
+    
+    BoxLayout:
+        orientation: "vertical"
+        Label:
+            text: "Email"
+        TextInput:
+            id: email
+            multiline: False
+        Label:
+            text: "Password"
+        TextInput:
+            id: password
+            multiline: False
+        Button:
+            text: "Create Account"
+            on_press: root.manager.current = "login"
+        Button:
+            text: "Cancel"
+            on_press: root.manager.current = "login"
