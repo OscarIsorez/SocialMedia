@@ -10,12 +10,14 @@ from kivymd.uix.button import MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
 
 from kivy.properties import ObjectProperty, StringProperty
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.scrollview import ScrollView
 
+from kivy.uix.button import Button
 
 from icecream import ic
 
 
-# Définir le fichier KV
 KV = """
 BoxLayout:
     orientation: 'vertical'
@@ -83,6 +85,7 @@ BoxLayout:
                 GridLayout:
                     id:grid
                     cols: 1
+                    spacing: 10
                     size_hint_y: None
                     height: self.minimum_height
 
@@ -98,6 +101,13 @@ BoxLayout:
             text: "Page 3"
             icon: 'plus-box'
             on_tab_release: root.on_enter_tab3()
+            MDFloatLayout:
+
+                MDRoundFlatIconButton:
+                    text: "Open manager"
+                    icon: "folder"
+                    pos_hint: {"center_x": .5, "center_y": .5}
+                    on_release: app.file_manager_open()
     
         MDBottomNavigationItem:
             name: 'screen 4'
@@ -123,7 +133,7 @@ BoxLayout:
                     halign: 'center'
                     valign: 'middle'
 
-            
+
                 
 <LoginScreen>:
     name: 'login'
@@ -172,45 +182,8 @@ class MainScreen(Screen):
 
     def on_enter(self):
         grid = self.ids.grid
-
         grid.clear_widgets()
         grid.height = self.height
-        layout = MDBoxLayout(orientation="vertical", spacing=10)
-
-        for i in range(10):
-            smart_tile = MDSmartTile(
-                radius=24,
-                box_radius=[0, 0, 24, 24],
-                box_color=(1, 1, 1, 0.2),
-                source="cat.jpg",
-                pos_hint={"center_x": 0.5, "center_y": 0.5},
-                size_hint=(1, None),
-                height="320dp",
-                size=("320dp", "320dp"),
-            )
-
-            icon_button = MDIconButton(
-                icon="heart-outline",
-                theme_text_color="Custom",
-                text_color=(1, 0, 0, 1),
-                pos_hint={"center_y": 0.5},
-            )
-            icon_button.bind(
-                on_release=lambda instance: setattr(
-                    icon_button,
-                    "icon",
-                    "heart" if icon_button.icon == "heart-outline" else "heart-outline",
-                )
-            )
-
-            label = MDLabel(text="Julia and Julie", bold=True, color=(1, 1, 1, 1))
-
-            smart_tile.add_widget(icon_button)
-            smart_tile.add_widget(label)
-
-            layout.add_widget(smart_tile)
-
-        grid.add_widget(layout)
 
     def add_smart_tile(self):
         smart_tile = MDSmartTile(
@@ -219,7 +192,8 @@ class MainScreen(Screen):
             box_color=(1, 1, 1, 0.2),
             source="cat.jpg",
             pos_hint={"center_x": 0.5, "center_y": 0.5},
-            size=("320dp", "320dp"),
+            size_hint=(None, None),
+            size=("350", "350"),
         )
 
         icon_button = MDIconButton(
