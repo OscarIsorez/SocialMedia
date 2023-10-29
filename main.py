@@ -12,10 +12,14 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.properties import ObjectProperty, StringProperty
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.scrollview import ScrollView
+from kivymd.uix.filemanager import MDFileManager
 
 from kivy.uix.button import Button
+from kivymd.toast import toast
 
 from icecream import ic
+
+import os
 
 
 KV = """
@@ -100,14 +104,36 @@ BoxLayout:
             name: 'screen 3'
             text: "Page 3"
             icon: 'plus-box'
-            on_tab_release: root.on_enter_tab3()
             MDFloatLayout:
-
+                MDLabel:    
+                    text: "Ajouter une photo"
+                    theme_text_color: "Secondary"
+                    halign: 'center'
+                    pos_hint: {"center_x": .5, "center_y": .6}
                 MDRoundFlatIconButton:
                     text: "Open manager"
                     icon: "folder"
                     pos_hint: {"center_x": .5, "center_y": .5}
-                    on_release: app.file_manager_open()
+                    on_release: root.file_manager_open()
+
+                MDLabel:
+                    text:"Ajouter une description"
+                    theme_text_color: "Secondary"
+                    halign: 'center'
+                    pos_hint: {"center_x": .5, "center_y": .3}
+                MDTextField:
+                    hint_text: "Description"
+                    id: description_field
+                    size_hint: None, None
+                    size: 200, 40
+                    pos_hint: {"center_x": 0.5, "center_y": .2}
+
+                MDRaisedButton:
+                    text: "Ajouter"
+                    pos_hint: {"center_x": .5, "center_y": .1}
+                    on_release: 
+                        root.add_smart_tile(root.path, description_field.text)
+                        root.clear()
     
         MDBottomNavigationItem:
             name: 'screen 4'
@@ -185,12 +211,17 @@ class MainScreen(Screen):
         grid.clear_widgets()
         grid.height = self.height
 
-    def add_smart_tile(self):
+    def clear(self):
+        self.ids.description_field.text = ""
+        self.path = ""
+        self.desc = ""
+
+    def add_smart_tile(self, path, desc):
         smart_tile = MDSmartTile(
             radius=24,
             box_radius=[0, 0, 24, 24],
             box_color=(1, 1, 1, 0.2),
-            source="cat.jpg",
+            source=path,
             pos_hint={"center_x": 0.5, "center_y": 0.5},
             size_hint=(None, None),
             size=("350", "350"),
@@ -210,16 +241,16 @@ class MainScreen(Screen):
             )
         )
 
-        label = MDLabel(text="Julia and Julie", bold=True, color=(1, 1, 1, 1))
+        label = MDLabel(text=desc, bold=True, color=(1, 1, 1, 1))
 
         smart_tile.add_widget(icon_button)
         smart_tile.add_widget(label)
 
         self.ids.grid.add_widget(smart_tile)
-        ic("Smart tile added !")
+        toast("Post ajouté!")
 
-    def on_enter_tab3(self):
-        self.add_smart_tile()
+    # def on_enter_tab3(self):
+    #     self.add_smart_tile()
 
     def on_enter_tab4(self):
         self.ids.displayInfos.text = "Bienvenue, " + str(
@@ -231,6 +262,21 @@ class MainScreen(Screen):
             + "Votre mot de passe est : \n"
             + str(self.manager.get_screen("signup").password.text)
         )
+
+    def file_manager_open(self):
+        self.file_manager = MDFileManager(
+            exit_manager=self.exit_manager, select_path=self.select_path
+        )
+        self.file_manager.show(os.path.expanduser("~"))
+        self.manager_open = True
+
+    def select_path(self, path):
+        self.path = path
+        self.exit_manager()
+
+    def exit_manager(self, *args):
+        self.manager_open = False
+        self.file_manager.close()
 
 
 class MainsApp(MDApp):
