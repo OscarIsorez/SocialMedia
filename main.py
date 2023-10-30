@@ -19,6 +19,8 @@ from kivymd.toast import toast
 
 from icecream import ic
 
+from database import Database
+
 import os
 
 
@@ -67,10 +69,12 @@ BoxLayout:
             pos_hint: {"center_x": 0.5}
         MDRaisedButton:
             text: "SIGN UP"
-            on_release:  
+            on_release:  root.SignupButton()
+        MDRaisedButton:
+            text: "Déjà inscrit ? Connectez-vous"
+            on_release:
                 root.manager.current = 'login'
-                root.afficher_infos()
-
+                root.clear()
 <MainScreen>:
     name: 'main'
 
@@ -84,6 +88,7 @@ BoxLayout:
             name: 'screen 1'
             text: "Page 1"
             icon: 'greenhouse'
+            on_tab_release: root.on_enter_tab1()
 
             ScrollView:
                 GridLayout:
@@ -98,8 +103,15 @@ BoxLayout:
             text: "Page 2"
             icon: 'format-list-bulleted'
 
-
-
+            ScrollView:
+                MDList:
+                    id:list
+                    cols: 1
+                    spacing: 10
+                    size_hint_y: None
+                    height: self.minimum_height
+                 
+              
         MDBottomNavigationItem:
             name: 'screen 3'
             text: "Page 3"
@@ -158,6 +170,13 @@ BoxLayout:
                     # size: dp(200), dp(100)
                     halign: 'center'
                     valign: 'middle'
+            MDRaisedButton:
+                text: "Logout"
+                pos_hint: {"center_x": .5, "center_y": .1}
+                on_release:
+                    root.manager.current = 'login' 
+                    root.clear()
+    
 
 
                 
@@ -179,15 +198,42 @@ BoxLayout:
             pos_hint: {"center_x": 0.5}
         MDRaisedButton:
             text: "LOGIN"
-            on_release:  root.manager.current = 'main'
+            on_release:  root.LoginButton()
         MDRaisedButton:
             text: "Create Account"
-            on_release:  root.manager.current = 'signup'
+            on_release:  
+                root.manager.current = 'signup'
+                root.clear()
 """
 
 
 class LoginScreen(Screen):
-    pass
+    def LoginButton(self):
+        app = MDApp.get_running_app()
+
+        app.db.show_users_db()
+        if app.db.validate_infos(
+            self.ids.login_email_field.text, self.ids.login_password_field.text
+        ):
+            app.current_user = app.db.select_user_by_mail(
+                self.ids.login_email_field.text
+            )
+            self.manager.current = "main"
+            self.manager.get_screen("main").on_enter_tab1()
+            self.manager.get_screen("main").on_enter_tab2()
+            self.manager.get_screen("main").on_enter_tab4()
+
+            toast("Connexion réussie !")
+
+            ic(app.current_user)
+            self.clear()
+
+        else:
+            toast("Identifiants incorrects !")
+
+    def clear(self):
+        self.ids.login_email_field.text = ""
+        self.ids.login_password_field.text = ""
 
 
 class SignupScreen(Screen):
@@ -200,8 +246,42 @@ class SignupScreen(Screen):
         ic(self.email.text)
         ic(self.password.text)
 
+    def SignupButton(self):
+        app = MDApp.get_running_app()
+        # on ajoute les infos dans la base de données
+        if (
+            self.profilename.text == ""
+            or self.email.text == ""
+            or self.password.text == ""
+        ):
+            toast("Veuillez remplir tous les champs")
+        else:
+            app.db.insert_user(
+                self.profilename.text, self.email.text, self.password.text
+            )
+
+            self.afficher_infos()
+
+            self.clear()
+
+            self.manager.current = "login"
+
+    def add_user(self):
+        self.app = MDApp.get_running_app()
+        self.app.db.insert_user(
+            self.profilename.text, self.email.text, self.password.text
+        )
+
+    def clear(self):
+        self.ids.nom_field.text = ""
+        self.ids.email_field.text = ""
+        self.ids.password_field.text = ""
+
 
 class MainScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     profilename = ObjectProperty(None)
     email = ObjectProperty(None)
     password = ObjectProperty(None)
@@ -210,6 +290,26 @@ class MainScreen(Screen):
         grid = self.ids.grid
         grid.clear_widgets()
         grid.height = self.height
+
+    def on_enter_tab1(self):
+        # on affiche les posts de tous les utilisateurs
+        app = MDApp.get_running_app()
+        grid = self.ids.grid
+        grid.clear_widgets()
+        grid.height = self.height
+        posts = app.db.select_all_posts()
+        ic(posts)
+        for post in posts:
+            self.add_smart_tile(post[3], post[2])
+
+    def on_enter_tab2(self):
+        # on affiche la liste de tous les utilisateurs, leur nom et leur adresse e-mail
+        app = MDApp.get_running_app()
+        list = self.ids.list
+        list.clear_widgets()
+        list.height = self.height
+        users = app.db.select_all_users()
+        ic(users)
 
     def clear(self):
         self.ids.description_field.text = ""
@@ -247,21 +347,35 @@ class MainScreen(Screen):
         smart_tile.add_widget(label)
 
         self.ids.grid.add_widget(smart_tile)
-        toast("Post ajouté!")
-
-    # def on_enter_tab3(self):
-    #     self.add_smart_tile()
+        self.app = MDApp.get_running_app()
+        # si le les champs sont vides on affiche un message d'erreur
+        if self.ids.description_field.text == "" or self.path == "":
+            toast("Veuillez remplir tous les champs")
+        else:
+            self.app.db.insert_post(self.app.current_user[0], desc, path)
+        toast("Post ajouté !")
 
     def on_enter_tab4(self):
-        self.ids.displayInfos.text = "Bienvenue, " + str(
-            self.manager.get_screen("signup").profilename.text
-            + " !\n"
-            + "Votre adresse e-mail est : \n"
-            + str(self.manager.get_screen("signup").email.text)
+        app = MDApp.get_running_app()
+        self.user_infos = [
+            app.current_user[1],
+            app.current_user[2],
+            app.current_user[3],
+        ]
+        ic(self.user_infos)
+        self.ids.displayInfos.text = (
+            "Bienvenue, "
+            + self.user_infos[0]
+            + " !"
             + "\n"
-            + "Votre mot de passe est : \n"
-            + str(self.manager.get_screen("signup").password.text)
-        )
+            + "Adresse e-mail : "
+            + self.user_infos[1]
+            + "\n"
+            + "Mot de passe : "
+            + self.user_infos[2]
+        )  # on affiche le nom de l'utilisateur connecté
+        self.ids.displayInfos.font_style = "H5"
+        self.ids.displayInfos.halign = "center"
 
     def file_manager_open(self):
         self.file_manager = MDFileManager(
@@ -278,18 +392,34 @@ class MainScreen(Screen):
         self.manager_open = False
         self.file_manager.close()
 
+    def clear(self):
+        self.ids.description_field.text = ""
+        self.path = ""
+        self.desc = ""
+        self.ids.displayInfos.text = ""
+        self.on_enter_tab4()
+
 
 class MainsApp(MDApp):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.db = Database("database.db")
+        self.db.create_tables()
+
+        self.current_user = None
+
     def build(self):
         self.screen_manager = ScreenManager()
         self.screen_manager.add_widget(SignupScreen(name="signup"))
         self.screen_manager.add_widget(LoginScreen(name="login"))
         self.screen_manager.add_widget(MainScreen(name="main"))
-        ic(self.screen_manager.screens)
 
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.theme_style = "Light"
         return Builder.load_string(KV)
+
+    def on_stop(self):
+        self.db.close()
 
 
 if __name__ == "__main__":
