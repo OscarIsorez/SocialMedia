@@ -22,6 +22,8 @@ class Database:
         self.conn.commit()
 
         # Créez la table des posts s'ils n'existent pas
+
+        # liked est une liste au format json de user_id séparés par des virgules (ex: "[1,2,3]")
         self.cur.execute(
             """
             CREATE TABLE IF NOT EXISTS posts (
@@ -29,6 +31,7 @@ class Database:
                 user_id INTEGER,
                 description TEXT,
                 path TEXT,
+                liked TEXT,
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         """
@@ -42,10 +45,17 @@ class Database:
         )
         self.conn.commit()
 
-    def insert_post(self, user_id, description, path):
+    def insert_post(self, user_id, description, path, liked):
         self.cur.execute(
-            "INSERT INTO posts (user_id, description, path) VALUES (?, ?, ?)",
-            (user_id, description, path),
+            "INSERT INTO posts (user_id, description, path, liked) VALUES (?, ?, ?, ?)",
+            (user_id, description, path, liked),
+        )
+        self.conn.commit()
+
+    def update_post(self, post_id, description, path, liked):
+        self.cur.execute(
+            "UPDATE posts SET description = ?, path = ?, liked = ? WHERE id = ?",
+            (description, path, liked, post_id),
         )
         self.conn.commit()
 
@@ -65,6 +75,17 @@ class Database:
         self.cur.execute("SELECT * FROM posts WHERE user_id = ?", (user_id,))
         return self.cur.fetchall()
 
+    def select_post_by_id(self, post_id):
+        self.cur.execute("SELECT * FROM posts WHERE id = ?", (post_id,))
+        return self.cur.fetchone()
+
+    def select_post_by_path_and_description(self, path, description):
+        self.cur.execute(
+            "SELECT * FROM posts WHERE path = ? AND description = ?",
+            (path, description),
+        )
+        return self.cur.fetchone()
+
     def select_all_posts(self):
         self.cur.execute("SELECT * FROM posts")
         return self.cur.fetchall()
@@ -72,6 +93,13 @@ class Database:
     def select_all_users(self):
         self.cur.execute("SELECT * FROM users")
         return self.cur.fetchall()
+
+    def update_likes_for_post(self, post_id, liked):
+        self.cur.execute(
+            "UPDATE posts SET liked = ? WHERE id = ?",
+            (liked, post_id),
+        )
+        self.conn.commit()
 
     def validate_infos(self, mail, password):
         # si les paramètres correspondent bien à un utilisateur existant
@@ -104,3 +132,10 @@ class Database:
     def suppr_all_posts(self):
         self.cur.execute("DELETE FROM posts")
         self.conn.commit()
+
+    def suppr_post_by_id(self, post_id):
+        self.cur.execute("DELETE FROM posts WHERE id = ?", (post_id,))
+        self.conn.commit()
+
+    def close(self):
+        self.conn.close()

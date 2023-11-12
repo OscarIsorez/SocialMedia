@@ -1,27 +1,24 @@
 from kivy.lang import Builder
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivymd.app import MDApp
-from kivymd.uix.textfield import MDTextField
-from kivymd.uix.button import MDRaisedButton
-from kivymd.uix.bottomnavigation import MDBottomNavigation, MDBottomNavigationItem
 from kivymd.uix.label import MDLabel
 from kivymd.uix.imagelist.imagelist import MDSmartTile
 from kivymd.uix.button import MDIconButton
-from kivymd.uix.boxlayout import MDBoxLayout
-
-from kivy.properties import ObjectProperty, StringProperty
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.scrollview import ScrollView
+from kivy.properties import ObjectProperty
 from kivymd.uix.filemanager import MDFileManager
+from kivy.uix.boxlayout import BoxLayout
 
 from kivy.uix.button import Button
 from kivymd.toast import toast
+
+from kivymd.uix.list import OneLineIconListItem, IconLeftWidget
 
 from icecream import ic
 
 from database import Database
 
 import os
+import json
 
 
 KV = """
@@ -29,9 +26,10 @@ BoxLayout:
     orientation: 'vertical'
 
     MDScreenManager:
-        SignupScreen:
         LoginScreen:
+        SignupScreen:
         MainScreen: 
+        UserDetailScreen:
 
 
 <SignupScreen>:
@@ -91,12 +89,14 @@ BoxLayout:
             on_tab_release: root.on_enter_tab1()
 
             ScrollView:
+
                 GridLayout:
                     id:grid
                     cols: 1
                     spacing: 10
                     size_hint_y: None
-                    height: self.minimum_height
+                    width: self.width
+                    height: self.height
 
         MDBottomNavigationItem:
             name: 'screen 2'
@@ -104,14 +104,16 @@ BoxLayout:
             icon: 'format-list-bulleted'
 
             ScrollView:
+                
+                
                 MDList:
-                    id:list
+                    id:user_list
                     cols: 1
                     spacing: 10
                     size_hint_y: None
                     height: self.minimum_height
-                 
-              
+            
+                    
         MDBottomNavigationItem:
             name: 'screen 3'
             text: "Page 3"
@@ -144,7 +146,7 @@ BoxLayout:
                     text: "Ajouter"
                     pos_hint: {"center_x": .5, "center_y": .1}
                     on_release: 
-                        root.add_smart_tile(root.path, description_field.text)
+                        root.add_smart_tile(root.path, description_field.text,  "[]")
                         root.clear()
     
         MDBottomNavigationItem:
@@ -152,31 +154,53 @@ BoxLayout:
             text: "Page 4"
             icon: 'face-man-shimmer'
             on_tab_release: root.on_enter_tab4()
-            background_color: (1, 0, 1, .5)
-            
+
             BoxLayout:
+                orientation : 'horizontal'
+                MDFloatingActionButton:
+                    icon: "camera-plus-outline"
+                    pos_hint: {"center_y": .9}
+                    md_bg_color: app.theme_cls.primary_color
+                    on_release: root.file_manager_open()
+
+
+                
+            BoxLayout:
+                padding: 10
                 orientation: 'vertical'
-                canvas.before:
-                    Color:
-                        rgba: 1, 0, 1, 1  # Couleur du contour (violet dans cet exemple)
-                    Line:
-                        width: 1  # Ajustez la valeur pour l'épaisseur du contour
-                        rectangle: self.x, self.y, self.width, self.height
+
                 MDLabel:
-                    id:displayInfos
+                    id: displayInfos
                     text: "Bienvenue"
-                    theme_text_color: "Secondary"  
-                    # size_hint: None, None
-                    # size: dp(200), dp(100)
+                    theme_text_color: "Secondary"
                     halign: 'center'
                     valign: 'middle'
-            MDRaisedButton:
-                text: "Logout"
-                pos_hint: {"center_x": .5, "center_y": .1}
-                on_release:
-                    root.manager.current = 'login' 
-                    root.clear()
-    
+
+                MDRaisedButton:
+                    text: "Logout"
+                    pos_hint: {"center_x": .5, "center_y": .1}
+                    padding: 10
+                    on_release:
+                        root.manager.current = 'login' 
+                        root.clear()
+
+                BoxLayout:
+                    size_hint_y : None
+                    height : 10
+                   
+
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: 0.7  
+
+                    ScrollView:
+                        GridLayout:
+                            id: grid_tab4
+                            cols: 2  
+                            spacing: 10
+                            padding: 10
+                            size_hint_y: None
+                            height: self.minimum_height
 
 
                 
@@ -204,7 +228,109 @@ BoxLayout:
             on_release:  
                 root.manager.current = 'signup'
                 root.clear()
+
+<UserDetailScreen>:
+    name: 'user_profile'
+    BoxLayout:
+        orientation: 'vertical'
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint_y: None
+            height: dp(48)
+            MDIconButton:
+                icon: "arrow-left"
+                pos_hint: {"center_x": .1, "center_y": .5}
+                on_release: root.manager.current = 'main'
+            MDLabel:
+                text: "Profil"
+                bold: True
+                theme_text_color: "Secondary"
+                font_style: "H6"
+
+        BoxLayout:
+            orientation: 'vertical'
+
+            MDLabel:
+                id: user_name_label
+                text: "Nom : "
+                theme_text_color: "Secondary"
+                halign: 'center'
+                valign: 'middle'
+            MDLabel:
+                id: user_email_label
+                text: "Adresse e-mail : "
+                theme_text_color: "Secondary"
+                halign: 'center'
+                valign: 'middle'
+                pos_hint: {"center_x": .5}
+                background_color: (1, 1, 1, )
+
+        BoxLayout:
+            size_hint_y : None
+            height : 10
+            #la ligne est visible car elle a une couleur
+            canvas.before:
+                Color:
+                    rgba: 0, 0, 0, 1
+                Line:
+                    width: 1
+                    rectangle: self.x, self.y, self.width,dp(1)
+
+
+        
+        ScrollView:
+            do_scroll_y: True
+            id:scrollview_profiles_post
+
+            GridLayout:
+                id: user_posts_grid
+                cols: 2
+                spacing: 10
+                padding: 10
+                size_hint_y: None
+                height: self.minimum_height
+
 """
+
+
+class UserDetailScreen(Screen):
+    def fill_user_posts_grid(self, user):
+        app = MDApp.get_running_app()
+        grid = self.ids.user_posts_grid
+        grid.clear_widgets()
+        grid.height = self.height / 2
+
+        posts = app.db.select_posts_by_user(user[0])
+
+        self.ids.scrollview_profiles_post.do_scroll_y = True
+        if len(posts) == 0:
+            label = MDLabel(
+                text="Aucune photo à afficher pour le moment",
+                bold=True,
+                halign="center",
+                color=(1, 1, 1, 1),
+            )
+            self.ids.scrollview_profiles_post.do_scroll_y = False
+
+            grid.add_widget(label)
+        for post in posts:
+            self.add_smart_tile(post[3], post[2])
+
+    def add_smart_tile(self, path, desc):
+        smart_tile = MDSmartTile(
+            radius=24,
+            box_radius=[0, 0, 24, 24],
+            box_color=(1, 1, 1, 0.2),
+            source=path,
+            size_hint=(None, None),
+            size=(self.width / 2.3, self.width / 2.3),
+        )
+
+        label = MDLabel(text=desc, bold=True, color=(1, 1, 1, 1))
+
+        smart_tile.add_widget(label)
+
+        self.ids.user_posts_grid.add_widget(smart_tile)
 
 
 class LoginScreen(Screen):
@@ -225,7 +351,6 @@ class LoginScreen(Screen):
 
             toast("Connexion réussie !")
 
-            ic(app.current_user)
             self.clear()
 
         else:
@@ -248,7 +373,6 @@ class SignupScreen(Screen):
 
     def SignupButton(self):
         app = MDApp.get_running_app()
-        # on ajoute les infos dans la base de données
         if (
             self.profilename.text == ""
             or self.email.text == ""
@@ -286,37 +410,73 @@ class MainScreen(Screen):
     email = ObjectProperty(None)
     password = ObjectProperty(None)
 
+    def show_user_profile(self, user_id):
+        app = MDApp.get_running_app()
+        user = app.db.select_user_by_id(user_id)
+        self.manager.current = "user_profile"
+        self.user_screen = self.manager.get_screen("user_profile")
+
+        self.user_screen.ids.user_name_label.text = "Nom : " + user[1]
+        self.user_screen.ids.user_email_label.text = "Adresse e-mail : " + user[2]
+
+        # on affiche les posts de l'utilisateur
+        self.user_screen.fill_user_posts_grid(user)
+
     def on_enter(self):
         grid = self.ids.grid
         grid.clear_widgets()
         grid.height = self.height
+        self.ids.displayInfos.text = ""
+        self.on_enter_tab1()
+        self.on_enter_tab2()
+        self.on_enter_tab4()
 
     def on_enter_tab1(self):
-        # on affiche les posts de tous les utilisateurs
         app = MDApp.get_running_app()
         grid = self.ids.grid
         grid.clear_widgets()
-        grid.height = self.height
+
+        total_height = 0
+
+        grid.add_widget(BoxLayout(size_hint_y=None, height=10))  # margin top
+
         posts = app.db.select_all_posts()
-        ic(posts)
         for post in posts:
-            self.add_smart_tile(post[3], post[2])
+            total_height += self.width
+            self.add_smart_tile(post[3], post[2], post[4])
+
+        grid.height = total_height + 55  # we had a little margin at the bottom
 
     def on_enter_tab2(self):
-        # on affiche la liste de tous les utilisateurs, leur nom et leur adresse e-mail
         app = MDApp.get_running_app()
-        list = self.ids.list
+        list = self.ids.user_list
         list.clear_widgets()
         list.height = self.height
         users = app.db.select_all_users()
-        ic(users)
+        for user in users:
+            list.add_widget(
+                OneLineIconListItem(
+                    IconLeftWidget(icon="account"),
+                    text=user[1]
+                    if user[1] != app.current_user[1]
+                    else user[1] + " (Vous)",
+                    on_release=lambda x, y=user[0]: self.on_user_click(y),
+                )
+            )
+
+    def on_user_click(self, user_id):
+        self.show_user_profile(user_id)
 
     def clear(self):
         self.ids.description_field.text = ""
         self.path = ""
         self.desc = ""
 
-    def add_smart_tile(self, path, desc):
+    def add_smart_tile(self, path, desc, liked="[]"):
+        app = MDApp.get_running_app()
+
+        list_liked = json.loads(liked)
+
         smart_tile = MDSmartTile(
             radius=24,
             box_radius=[0, 0, 24, 24],
@@ -324,21 +484,24 @@ class MainScreen(Screen):
             source=path,
             pos_hint={"center_x": 0.5, "center_y": 0.5},
             size_hint=(None, None),
-            size=("350", "350"),
+            size=(self.width, self.width),
+        )
+
+        smart_tile.bind(
+            on_release=lambda x: self.show_user_profile(
+                app.db.select_post_by_path_and_description(path, desc)[1]
+            )
         )
 
         icon_button = MDIconButton(
-            icon="heart-outline",
+            icon="heart-outline" if app.current_user[0] not in list_liked else "heart",
             theme_text_color="Custom",
             text_color=(1, 0, 0, 1),
             pos_hint={"center_y": 0.5},
         )
+
         icon_button.bind(
-            on_release=lambda instance: setattr(
-                icon_button,
-                "icon",
-                "heart" if icon_button.icon == "heart-outline" else "heart-outline",
-            )
+            on_release=lambda x: self.change_icon(icon_button, path, desc),
         )
 
         label = MDLabel(text=desc, bold=True, color=(1, 1, 1, 1))
@@ -348,12 +511,30 @@ class MainScreen(Screen):
 
         self.ids.grid.add_widget(smart_tile)
         self.app = MDApp.get_running_app()
-        # si le les champs sont vides on affiche un message d'erreur
-        if self.ids.description_field.text == "" or self.path == "":
-            toast("Veuillez remplir tous les champs")
+
+        if self.ids.description_field.text != "" and self.path != "":
+            self.app.db.insert_post(
+                self.app.current_user[0],
+                desc,
+                path,
+                "[]",
+            )
+
+    def change_icon(self, icon_button, path, desc):
+        post = self.app.db.select_post_by_path_and_description(path, desc)
+        if icon_button.icon == "heart-outline":
+            icon_button.icon = "heart"
+
+            liked = json.loads(post[4])
+            if self.app.current_user[0] not in liked:
+                liked.append(self.app.current_user[0])
+            self.app.db.update_likes_for_post(post[0], json.dumps(liked))
+
         else:
-            self.app.db.insert_post(self.app.current_user[0], desc, path)
-        toast("Post ajouté !")
+            icon_button.icon = "heart-outline"
+            liked = json.loads(post[4])
+            liked.remove(self.app.current_user[0])
+            self.app.db.update_likes_for_post(post[0], json.dumps(liked))
 
     def on_enter_tab4(self):
         app = MDApp.get_running_app()
@@ -362,7 +543,6 @@ class MainScreen(Screen):
             app.current_user[2],
             app.current_user[3],
         ]
-        ic(self.user_infos)
         self.ids.displayInfos.text = (
             "Bienvenue, "
             + self.user_infos[0]
@@ -376,6 +556,48 @@ class MainScreen(Screen):
         )  # on affiche le nom de l'utilisateur connecté
         self.ids.displayInfos.font_style = "H5"
         self.ids.displayInfos.halign = "center"
+
+        grid = self.ids.grid_tab4
+        grid.clear_widgets()
+        # grid.height = self.height
+        posts = app.db.select_posts_by_user(app.current_user[0])
+        for post in posts:
+            self.add_smart_tile_tab4(post[3], post[2])
+
+    def add_smart_tile_tab4(self, path, desc):
+        gap = self.width / 10
+        smart_tile = MDSmartTile(
+            radius=24,
+            box_radius=[0, 0, 24, 24],
+            box_color=(1, 1, 1, 0.2),
+            source=path,
+            size_hint=(None, None),
+            size=(self.width / 2.3, self.width / 2.3),
+        )
+
+        icon_button = MDIconButton(
+            icon="delete",
+            theme_text_color="Custom",
+            text_color=(1, 0, 0, 1),
+            pos_hint={"center_y": 0.5},
+        )
+
+        icon_button.bind(
+            on_release=lambda x: self.delete_post(path, desc),
+        )
+
+        label = MDLabel(text=desc, bold=True, color=(1, 1, 1, 1))
+
+        smart_tile.add_widget(icon_button)
+        smart_tile.add_widget(label)
+
+        self.ids.grid_tab4.add_widget(smart_tile)
+
+    def delete_post(self, path, desc):
+        app = MDApp.get_running_app()
+        post = app.db.select_post_by_path_and_description(path, desc)
+        app.db.suppr_post_by_id(post[0])
+        self.on_enter_tab4()
 
     def file_manager_open(self):
         self.file_manager = MDFileManager(
@@ -403,8 +625,9 @@ class MainScreen(Screen):
 class MainsApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
         self.db = Database("database.db")
-        self.db.create_tables()
+        # self.db.suppr_all_posts()
 
         self.current_user = None
 
@@ -413,6 +636,7 @@ class MainsApp(MDApp):
         self.screen_manager.add_widget(SignupScreen(name="signup"))
         self.screen_manager.add_widget(LoginScreen(name="login"))
         self.screen_manager.add_widget(MainScreen(name="main"))
+        self.screen_manager.add_widget(UserDetailScreen(name="user_profile"))
 
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.theme_style = "Light"
